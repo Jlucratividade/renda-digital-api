@@ -1,21 +1,4 @@
 export default async function handler(req, res) {
-  // Configurar CORS para testes locais
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      ok: false,
-      error: "Metodo nao permitido"
-    });
-  }
-/*
-export default async function handler(req, res) {
   // Aceitar somente POST
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -23,7 +6,7 @@ export default async function handler(req, res) {
       error: "Metodo nao permitido"
     });
   }
-*/
+
   // Autenticação do MacroDroid (usa o mesmo CLIENT_TOKEN)
   const token = process.env.CLIENT_TOKEN;
   const authorization = req.headers.authorization;
@@ -56,8 +39,7 @@ export default async function handler(req, res) {
   // Credenciais da Gemini
   const apiKey = process.env.GEMINI_API_KEY;
   // Usando o modelo padrão atual, por exemplo, gemini-2.5-flash
-  // const model = process.env.AI_MODEL || "gemini-2.5-flash";
-  const model = process.env.AI_MODEL || "gemini-3.8-flash";
+  const model = process.env.AI_MODEL || "gemini-2.5-flash";
 
   if (!apiKey) {
     return res.status(500).json({
