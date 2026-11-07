@@ -30,7 +30,7 @@ O modelo de cada provedor é isolado. A variável antiga `AI_MODEL` não é mais
 
 Opcional:
 
-- `ALLOWED_ORIGINS`: lista separada por vírgulas de origens de navegador autorizadas, por exemplo `https://renda-digital-api.vercel.app,https://www.seudominio.com`. Se ficar vazia, a API aceita a origem recebida e a autenticação por `CLIENT_TOKEN` continua obrigatória. CORS não substitui autenticação.
+- `ALLOWED_ORIGINS`: lista opcional separada por vírgulas ou ponto e vírgula, por exemplo `https://renda-digital-api.vercel.app,https://www.seudominio.com`. URLs com barra final também são normalizadas. O próprio domínio que recebe a requisição é autorizado automaticamente (same-origin), mesmo que a variável contenha uma lista antiga. Para uma interface hospedada em outro domínio, inclua a origem exata nessa variável. Se ficar vazia, a API aceita a origem recebida e a autenticação por `CLIENT_TOKEN` continua obrigatória. CORS não substitui autenticação.
 - `OPENROUTER_SITE_URL`: URL usada como `HTTP-Referer` no OpenRouter.
 - `OPENROUTER_APP_NAME`: nome enviado como `X-Title`.
 
