@@ -51,3 +51,14 @@ Opcional:
 - Não coloque chaves de provedores no HTML ou no navegador. Elas permanecem no backend Vercel.
 - Nunca publique `CLIENT_TOKEN` em páginas públicas ou repositórios. O token deve ser fornecido apenas a clientes confiáveis.
 - A rota antiga `/api/pautas` agora encaminha para Gemini porque era assim que a interface original a identificava. Clientes que usavam essa rota esperando Groq devem migrar para `/api/groq`.
+
+
+### Cloudflare Workers AI — configuração recomendada
+
+Use um modelo atualmente disponível e compatível com JSON Mode, por exemplo:
+
+```env
+CLOUDFLARE_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast
+```
+
+A integração envia `response_format: { type: "json_object" }` e aceita a resposta estruturada como objeto ou texto. Depois de alterar variáveis na Vercel, faça um novo deployment.
