@@ -56,7 +56,8 @@ export default async function handler(req, res) {
   // Credenciais da Gemini
   const apiKey = process.env.GEMINI_API_KEY;
   // Usando o modelo padrão atual, por exemplo, gemini-2.5-flash
-  const model = process.env.AI_MODEL || "gemini-2.5-flash";
+  // const model = process.env.AI_MODEL || "gemini-2.5-flash";
+  const model = process.env.AI_MODEL || "gemini-3.8-flash";
 
   if (!apiKey) {
     return res.status(500).json({
