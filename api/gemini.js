@@ -1,4 +1,21 @@
 export default async function handler(req, res) {
+  // Configurar CORS para testes locais
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      ok: false,
+      error: "Metodo nao permitido"
+    });
+  }
+/*
+export default async function handler(req, res) {
   // Aceitar somente POST
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -6,7 +23,7 @@ export default async function handler(req, res) {
       error: "Metodo nao permitido"
     });
   }
-
+*/
   // Autenticação do MacroDroid (usa o mesmo CLIENT_TOKEN)
   const token = process.env.CLIENT_TOKEN;
   const authorization = req.headers.authorization;
