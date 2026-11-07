@@ -127,6 +127,18 @@ pre {
 .success { color: #4ade80; }
 .error { color: #f87171; }
 
+
+.diagnostics { margin-top:24px; border-top:1px solid #334155; padding-top:18px; }
+.diagnostics h2 { font-size:1.05rem; color:#f8fafc; margin-bottom:8px; }
+.diagnostic-note { color:#94a3b8; font-size:.8rem; line-height:1.5; margin-bottom:12px; }
+.diag-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid #334155; }
+.diag-name { font-size:.9rem; font-weight:600; }
+.diag-state { display:block; color:#94a3b8; font-size:.75rem; margin-top:3px; overflow-wrap:anywhere; }
+.diag-actions { display:flex; align-items:center; gap:8px; }
+.diag-button { width:auto; min-width:84px; margin:0; padding:8px 10px; font-size:.78rem; }
+.diag-dot { width:9px; height:9px; display:inline-block; border-radius:50%; background:#64748b; margin-right:6px; }
+.diag-dot.ok { background:#4ade80; } .diag-dot.fail { background:#f87171; } .diag-dot.wait { background:#fbbf24; }
+@media(max-width:480px){ .container{padding:18px;} .diag-row{align-items:flex-start;} .diag-actions{flex-direction:column;align-items:flex-end;} }
 </style>
 </head>
 
@@ -214,6 +226,13 @@ pre {
 
 </form>
 
+<div class="diagnostics">
+  <h2>Diagnóstico dos provedores</h2>
+  <p class="diagnostic-note">Verificação de configuração e teste real de geração. O teste envia uma solicitação de uma pauta ao provedor e pode consumir sua cota/API.</p>
+  <div id="diagnosticList"></div>
+  <button type="button" id="btnCheckConfig" class="diag-button">Verificar variáveis configuradas</button>
+</div>
+
 <div class="output-section">
 
   <div class="status" id="statusMessage">
@@ -230,7 +249,7 @@ pre {
 
 const providers = {
   pautas: {
-    path: "/api/pautas",
+    path: "/api/gemini",
     name: "Google Gemini",
     description: "Modelos Gemini - geração de pautas."
   },
@@ -254,11 +273,93 @@ const providers = {
   }
 };
 
+const diagnosticProviders = [
+  {id:"pautas",label:"Google Gemini"},
+  {id:"groq",label:"Groq"},
+  {id:"openrouter",label:"OpenRouter"},
+  {id:"cloudflare",label:"Cloudflare Workers AI"}
+];
+const diagnosticList = document.getElementById("diagnosticList");
+
+function diagnosticRow(item) {
+  const row = document.createElement("div");
+  row.className = "diag-row";
+  row.innerHTML = `<div><span class="diag-name"></span><span class="diag-state" id="diag-state-${item.id}">Ainda não testado</span></div><div class="diag-actions"><span class="diag-dot" id="diag-dot-${item.id}"></span><button type="button" class="diag-button" data-test="${item.id}">Testar</button></div>`;
+  row.querySelector(".diag-name").textContent = item.label;
+  return row;
+}
+diagnosticProviders.forEach(item => diagnosticList.appendChild(diagnosticRow(item)));
+
+function setDiagnostic(id, state, message) {
+  const dot = document.getElementById(`diag-dot-${id}`);
+  const label = document.getElementById(`diag-state-${id}`);
+  dot.className = `diag-dot ${state}`;
+  label.textContent = message;
+}
+
 const form = document.getElementById("apiForm");
 const providerSelect = document.getElementById("provider");
 const btnSubmit = document.getElementById("btnSubmit");
 const statusMessage = document.getElementById("statusMessage");
 const jsonResult = document.getElementById("jsonResult");
+const endpointInput = document.getElementById("endpoint");
+const tokenInput = document.getElementById("token");
+
+async function runProviderTest(id) {
+  const baseUrl = endpointInput.value.trim().replace(/\/+$/, "");
+  const token = tokenInput.value.trim();
+  const provider = providers[id];
+  if (!baseUrl || !token) {
+    setDiagnostic(id,"fail","Informe URL Base e CLIENT_TOKEN acima.");
+    return;
+  }
+  const button = diagnosticList.querySelector(`[data-test="${id}"]`);
+  button.disabled = true;
+  button.textContent = "Testando";
+  setDiagnostic(id,"wait","Chamando o provedor; aguarde...");
+  try {
+    const response = await fetch(baseUrl + provider.path,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({niche:"Teste de integração",audience:"Público geral",quantity:1})});
+    const data = await response.json().catch(()=>({ok:false,error:"Resposta não JSON"}));
+    if (!response.ok || !data.ok) {
+      const extra = data.provider_status ? ` (HTTP provedor ${data.provider_status})` : "";
+      setDiagnostic(id,"fail",`Falhou: HTTP ${response.status}${extra} — ${data.error || "Erro desconhecido"}`);
+    } else {
+      setDiagnostic(id,"ok",`Funcionando — ${data.model || "modelo não informado"}`);
+    }
+  } catch (error) {
+    setDiagnostic(id,"fail",`Falha de comunicação/CORS: ${error.message}`);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Testar";
+  }
+}
+
+diagnosticList.addEventListener("click", event => {
+  const button = event.target.closest("[data-test]");
+  if (button) runProviderTest(button.dataset.test);
+});
+
+document.getElementById("btnCheckConfig").addEventListener("click", async () => {
+  const baseUrl = endpointInput.value.trim().replace(/\/+$/, "");
+  const token = tokenInput.value.trim();
+  const button = document.getElementById("btnCheckConfig");
+  if (!baseUrl || !token) { alert("Informe a URL Base e o CLIENT_TOKEN."); return; }
+  button.disabled = true; button.textContent = "Verificando...";
+  try {
+    const response = await fetch(baseUrl + "/api/health", {headers:{"Authorization":`Bearer ${token}`}});
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    for (const item of diagnosticProviders) {
+      const id = item.id === "pautas" ? "gemini" : item.id;
+      const info = data.providers[id];
+      if (!info) continue;
+      setDiagnostic(item.id, info.configured ? "ok" : "fail", info.configured ? `Variáveis presentes — ${info.model || "modelo não definido"}. Ainda não testado.` : `Faltando: ${info.missing.join(", ")}`);
+    }
+  } catch (error) {
+    statusMessage.className = "status error";
+    statusMessage.textContent = `Falha ao consultar diagnóstico: ${error.message}`;
+  } finally { button.disabled = false; button.textContent = "Verificar variáveis configuradas"; }
+});
 
 providerSelect.addEventListener("change", () => {
 
@@ -356,6 +457,8 @@ form.addEventListener("submit", async (event) => {
 
     statusMessage.textContent =
       `Sucesso! ${provider.name} | Modelo: ${data.model}`;
+    const diagId = providerId;
+    setDiagnostic(diagId,"ok",`Funcionando — ${data.model}`);
 
     jsonResult.textContent =
       JSON.stringify(data, null, 2);
