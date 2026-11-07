@@ -24,7 +24,7 @@ Configure somente os provedores que pretende utilizar:
 - `GEMINI_API_KEY` e opcionalmente `GEMINI_MODEL` (padrão `gemini-2.5-flash`).
 - `GROQ_API_KEY` e opcionalmente `GROQ_MODEL` (padrão `openai/gpt-oss-20b`).
 - `OPENROUTER_API_KEY` e opcionalmente `OPENROUTER_MODEL` (padrão `openrouter/free`).
-- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` e `CLOUDFLARE_MODEL` (o modelo deve ser um identificador Workers AI válido para sua conta, por exemplo `@cf/meta/llama-3.1-8b-instruct`).
+- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` e `CLOUDFLARE_MODEL` (o modelo deve ser um identificador Workers AI válido e habilitado para sua conta, por exemplo `@cf/meta/llama-3.3-70b-instruct-fp8-fast`).
 
 O modelo de cada provedor é isolado. A variável antiga `AI_MODEL` não é mais utilizada.
 
@@ -61,4 +61,4 @@ Use um modelo atualmente disponível e compatível com JSON Mode, por exemplo:
 CLOUDFLARE_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast
 ```
 
-A integração envia `response_format: { type: "json_object" }` e aceita a resposta estruturada como objeto ou texto. Depois de alterar variáveis na Vercel, faça um novo deployment.
+A integração envia `response_format` no modo `json_schema`, com os campos, tipos, público e quantidade esperados. A Cloudflare pode devolver o objeto em `result.response`; o backend também aceita respostas textuais JSON. A validação informa quais campos falharam. Depois de alterar arquivos ou variáveis na Vercel, faça um novo deployment.
