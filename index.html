@@ -1,0 +1,388 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Pautas - Multi LLM</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 650px;
+  padding: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,.5);
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 22px;
+  color: #f97316;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: .875rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #cbd5e1;
+}
+
+input, select {
+  width: 100%;
+  padding: 11px 12px;
+  background: #0f172a;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: .95rem;
+  outline: none;
+}
+
+input:focus, select:focus {
+  border-color: #f97316;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: #ea580c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover {
+  background: #c2410c;
+}
+
+button:disabled {
+  background: #475569;
+  cursor: not-allowed;
+}
+
+.output-section {
+  margin-top: 24px;
+  border-top: 1px solid #334155;
+  padding-top: 16px;
+}
+
+pre {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 14px;
+  color: #ffedd5;
+  font-family: monospace;
+  font-size: .875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 450px;
+  overflow-y: auto;
+}
+
+.status {
+  font-size: .875rem;
+  margin-bottom: 10px;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
+.provider-info {
+  font-size: .8rem;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+.success { color: #4ade80; }
+.error { color: #f87171; }
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Gerador de Pautas Multi-LLM</h1>
+
+<form id="apiForm">
+
+  <div class="form-group">
+    <label for="endpoint">URL Base da Vercel</label>
+    <input
+      type="url"
+      id="endpoint"
+      value="https://renda-digital-api.vercel.app"
+      required
+    >
+  </div>
+
+  <div class="form-group">
+    <label for="provider">Provedor de Inteligência Artificial</label>
+
+    <select id="provider">
+      <option value="pautas">Google Gemini</option>
+      <option value="groq">Groq</option>
+      <option value="openrouter">OpenRouter</option>
+      <option value="cloudflare">Cloudflare Workers AI</option>
+    </select>
+
+    <div class="provider-info" id="providerInfo">
+      Google Gemini - geração de pautas.
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="token">Client Token (CLIENT_TOKEN)</label>
+    <input
+      type="password"
+      id="token"
+      placeholder="Insira seu token de segurança"
+      required
+      autocomplete="off"
+    >
+  </div>
+
+  <div class="form-group">
+    <label for="niche">Nicho</label>
+    <input
+      type="text"
+      id="niche"
+      value="Marketing Digital"
+      maxlength="100"
+      required
+    >
+  </div>
+
+  <div class="form-group">
+    <label for="audience">Público-Alvo</label>
+    <input
+      type="text"
+      id="audience"
+      value="Empreendedores iniciantes"
+      maxlength="200"
+      required
+    >
+  </div>
+
+  <div class="form-group">
+    <label for="quantity">Quantidade de Pautas (1 a 5)</label>
+
+    <select id="quantity">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+
+  <button type="submit" id="btnSubmit">
+    Gerar Pautas
+  </button>
+
+</form>
+
+<div class="output-section">
+
+  <div class="status" id="statusMessage">
+    Aguardando envio...
+  </div>
+
+  <pre id="jsonResult">// A resposta JSON aparecerá aqui</pre>
+
+</div>
+
+</div>
+
+<script>
+
+const providers = {
+  pautas: {
+    path: "/api/pautas",
+    name: "Google Gemini",
+    description: "Modelos Gemini - geração de pautas."
+  },
+
+  groq: {
+    path: "/api/groq",
+    name: "Groq",
+    description: "Inferência rápida com modelos open source."
+  },
+
+  openrouter: {
+    path: "/api/openrouter",
+    name: "OpenRouter",
+    description: "Acesso a diferentes modelos gratuitos."
+  },
+
+  cloudflare: {
+    path: "/api/cloudflare",
+    name: "Cloudflare Workers AI",
+    description: "Inferência de modelos hospedados na Cloudflare."
+  }
+};
+
+const form = document.getElementById("apiForm");
+const providerSelect = document.getElementById("provider");
+const btnSubmit = document.getElementById("btnSubmit");
+const statusMessage = document.getElementById("statusMessage");
+const jsonResult = document.getElementById("jsonResult");
+
+providerSelect.addEventListener("change", () => {
+
+  const provider = providers[providerSelect.value];
+
+  document.getElementById("providerInfo").textContent =
+    provider.description;
+
+});
+
+form.addEventListener("submit", async (event) => {
+
+  event.preventDefault();
+
+  const baseUrl = document
+    .getElementById("endpoint")
+    .value.trim()
+    .replace(/\/+$/, "");
+
+  const token = document
+    .getElementById("token")
+    .value.trim();
+
+  const niche = document
+    .getElementById("niche")
+    .value.trim();
+
+  const audience = document
+    .getElementById("audience")
+    .value.trim();
+
+  const quantity = Number(
+    document.getElementById("quantity").value
+  );
+
+  const providerId = providerSelect.value;
+  const provider = providers[providerId];
+
+  if (!provider) {
+    statusMessage.textContent = "Provedor inválido.";
+    return;
+  }
+
+  if (!token || !niche || !audience) {
+    statusMessage.textContent = "Preencha todos os campos.";
+    return;
+  }
+
+  btnSubmit.disabled = true;
+  btnSubmit.textContent = "Gerando pautas...";
+
+  statusMessage.className = "status";
+  statusMessage.textContent =
+    `Conectando com ${provider.name}...`;
+
+  jsonResult.textContent = "Processando requisição...";
+
+  const endpoint = baseUrl + provider.path;
+
+  try {
+
+    const response = await fetch(endpoint, {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+
+      body: JSON.stringify({
+        niche,
+        audience,
+        quantity
+      })
+
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+
+      statusMessage.className = "status error";
+
+      statusMessage.textContent =
+        `Falha: HTTP ${response.status} - ${provider.name}`;
+
+      jsonResult.textContent =
+        JSON.stringify(data, null, 2);
+
+      return;
+    }
+
+    statusMessage.className = "status success";
+
+    statusMessage.textContent =
+      `Sucesso! ${provider.name} | Modelo: ${data.model}`;
+
+    jsonResult.textContent =
+      JSON.stringify(data, null, 2);
+
+  } catch (error) {
+
+    statusMessage.className = "status error";
+
+    statusMessage.textContent =
+      "Erro na comunicação com a API.";
+
+    jsonResult.textContent = JSON.stringify({
+      ok: false,
+      error: error.message,
+      endpoint
+    }, null, 2);
+
+  } finally {
+
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = "Gerar Pautas";
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>
